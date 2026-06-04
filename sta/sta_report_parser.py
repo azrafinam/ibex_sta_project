@@ -123,7 +123,6 @@ def print_summary(report_path):
             print(f'    {cnt:4d}  {mod}')
     print()
 
-
 # ===================== MAIN =====================
 if __name__ == '__main__':
     if len(sys.argv) < 2:

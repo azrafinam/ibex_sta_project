@@ -10576,7 +10576,6 @@ module ibex_top (
 	assign alert_major_bus_o = core_alert_major_bus | lockstep_alert_major_bus;
 	assign alert_minor_o = core_alert_minor | lockstep_alert_minor;
 endmodule
-
 module ibex_wb_stage (
 	clk_i,
 	rst_ni,
