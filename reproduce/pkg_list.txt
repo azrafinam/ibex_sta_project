@@ -1,0 +1,10 @@
+include/prim_util_pkg.sv
+include/prim_secded_pkg.sv
+include/prim_mubi_pkg.sv
+include/prim_esc_pkg.sv
+include/prim_cipher_pkg.sv
+include/prim_pad_wrapper_pkg.sv
+include/prim_subreg_pkg.sv
+include/prim_count_pkg.sv
+include/prim_ram_1p_pkg.sv
+rtl/ibex_pkg.sv

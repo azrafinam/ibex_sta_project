@@ -1,5 +1,7 @@
 import subprocess
 import sys
+import re
+from collections import Counter
 from sta_report_parser import extract_summary, parse_paths, count_by_module
 
 
@@ -18,11 +20,32 @@ def grep_count(pattern, filepath):
 
 
 def grep_value(pattern, filepath):
-    import re
     r = subprocess.run(['grep', pattern, filepath],
                        capture_output=True, text=True)
     m = re.search(r'(-?\d+\.\d+)', r.stdout)
     return float(m.group(1)) if m else None
+
+
+def raw_module_counts(filepath):
+    counts = Counter()
+    endpoint = ''
+
+    with open(filepath) as f:
+        for line in f:
+            s = line.strip()
+
+            if s.startswith('Endpoint:'):
+                endpoint = s.split(':', 1)[1].strip()
+                endpoint = re.sub(r'\s*\(.*?\)\s*$', '', endpoint).strip()
+
+            elif re.search(r'^-?\d+\.\d+\s+slack\b', s, re.IGNORECASE):
+                if 'VIOLATED' not in s:
+                    continue
+                parts = endpoint.split('/')
+                module = parts[1] if len(parts) >= 2 else parts[0] if parts else 'unknown'
+                counts[module] += 1
+
+    return dict(counts.most_common())
 
 
 def verify_report(report_path):
@@ -83,6 +106,14 @@ def verify_report(report_path):
     all_pass &= chk(
         'timing_met is bool',
         isinstance(summary['timing_met'], bool)
+    )
+
+    # 8 module ranking
+    raw_modules = raw_module_counts(report_path)
+    all_pass &= chk(
+        'module counts match raw report',
+        modules == raw_modules,
+        f'{modules} vs {raw_modules}'
     )
 
     print(f"\n  RESULT: {'ALL PASS' if all_pass else 'FAIL'}")

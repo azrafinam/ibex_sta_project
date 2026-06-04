@@ -1643,9 +1643,6 @@ module ibex_controller (
 	wire ebrk_insn;
 	wire csr_pipe_flush;
 	wire instr_fetch_err;
-	always @(negedge clk_i)
-		if ((((ctrl_fsm_cs == 4'd5) && instr_valid_i) && !instr_fetch_err_i) && illegal_insn_d)
-			$display("%t: Illegal instruction (hart %0x) at PC 0x%h: 0x%h", $time, u_ibex_core.hart_id_i, pc_id_i, (instr_is_compressed_i ? {16'b0000000000000000, instr_compressed_i} : instr_i));
 	assign load_err_d = load_err_i;
 	assign store_err_d = store_err_i;
 	assign ecall_insn = ecall_insn_i & instr_valid_i;
@@ -2057,38 +2054,6 @@ module ibex_controller (
 			illegal_insn_q <= illegal_insn_d;
 		end
 	end
-	wire fcov_all_debug_req;
-	assign fcov_all_debug_req = (debug_req_i || debug_mode_q) || debug_single_step_i;
-	wire unused_fcov_all_debug_req;
-	assign unused_fcov_all_debug_req = fcov_all_debug_req;
-	wire fcov_debug_wakeup;
-	assign fcov_debug_wakeup = ((ctrl_fsm_cs == 4'd3) & (ctrl_fsm_ns == 4'd4)) & ((debug_req_i || debug_mode_q) || debug_single_step_i);
-	wire unused_fcov_debug_wakeup;
-	assign unused_fcov_debug_wakeup = fcov_debug_wakeup;
-	wire fcov_interrupt_taken;
-	assign fcov_interrupt_taken = (ctrl_fsm_cs != 4'd7) & (ctrl_fsm_ns == 4'd7);
-	wire unused_fcov_interrupt_taken;
-	assign unused_fcov_interrupt_taken = fcov_interrupt_taken;
-	wire fcov_debug_entry_if;
-	assign fcov_debug_entry_if = (ctrl_fsm_cs != 4'd8) & (ctrl_fsm_ns == 4'd8);
-	wire unused_fcov_debug_entry_if;
-	assign unused_fcov_debug_entry_if = fcov_debug_entry_if;
-	wire fcov_debug_entry_id;
-	assign fcov_debug_entry_id = (ctrl_fsm_cs != 4'd9) & (ctrl_fsm_ns == 4'd9);
-	wire unused_fcov_debug_entry_id;
-	assign unused_fcov_debug_entry_id = fcov_debug_entry_id;
-	wire fcov_pipe_flush;
-	assign fcov_pipe_flush = (ctrl_fsm_cs != 4'd6) & (ctrl_fsm_ns == 4'd6);
-	wire unused_fcov_pipe_flush;
-	assign unused_fcov_pipe_flush = fcov_pipe_flush;
-	wire fcov_debug_req;
-	assign fcov_debug_req = debug_req_i & ~debug_mode_q;
-	wire unused_fcov_debug_req;
-	assign unused_fcov_debug_req = fcov_debug_req;
-	wire fcov_debug_single_step_taken;
-	assign fcov_debug_single_step_taken = do_single_step_d & ~do_single_step_q;
-	wire unused_fcov_debug_single_step_taken;
-	assign unused_fcov_debug_single_step_taken = fcov_debug_single_step_taken;
 	initial _sv2v_0 = 0;
 endmodule
 module ibex_core (
@@ -2536,12 +2501,6 @@ module ibex_core (
 		.if_busy_o(if_busy)
 	);
 	assign perf_iside_wait = id_in_ready & ~instr_valid_id;
-	initial begin : IbexMuBiSecureOnBottomBitSet
-		
-	end
-	initial begin : IbexMuBiSecureOffBottomBitClear
-		
-	end
 	generate
 		if (SecureIbex) begin : g_instr_req_gated_secure
 			assign instr_req_gated = instr_req_int & (fetch_enable_i == ibex_pkg_IbexMuBiOn);
@@ -2865,36 +2824,6 @@ module ibex_core (
 	assign alert_minor_o = icache_ecc_error;
 	assign alert_major_internal_o = (rf_ecc_err_comb | pc_mismatch_alert) | csr_shadow_err;
 	assign alert_major_bus_o = (lsu_load_resp_intg_err | lsu_store_resp_intg_err) | instr_intg_err;
-	wire outstanding_load_resp;
-	wire outstanding_store_resp;
-	wire outstanding_load_id;
-	wire outstanding_store_id;
-	assign outstanding_load_id = (id_stage_i.instr_executing & id_stage_i.lsu_req_dec) & ~id_stage_i.lsu_we;
-	assign outstanding_store_id = (id_stage_i.instr_executing & id_stage_i.lsu_req_dec) & id_stage_i.lsu_we;
-	generate
-		if (WritebackStage) begin : gen_wb_stage
-			assign outstanding_load_resp = outstanding_load_wb | (outstanding_load_id & load_store_unit_i.split_misaligned_access);
-			assign outstanding_store_resp = outstanding_store_wb | (outstanding_store_id & load_store_unit_i.split_misaligned_access);
-		end
-		else begin : gen_no_wb_stage
-			assign outstanding_load_resp = outstanding_load_id;
-			assign outstanding_store_resp = outstanding_store_id;
-		end
-	endgenerate
-	reg [31:0] pc_at_fetch_disable;
-	reg [3:0] last_fetch_enable;
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni) begin
-			pc_at_fetch_disable <= 1'sb0;
-			last_fetch_enable <= 1'sb0;
-		end
-		else begin
-			last_fetch_enable <= fetch_enable_i;
-			if ((fetch_enable_i != ibex_pkg_IbexMuBiOn) && (last_fetch_enable == ibex_pkg_IbexMuBiOn))
-				pc_at_fetch_disable <= pc_id;
-		end
-	wire fetch_enable_raw;
-	assign fetch_enable_raw = (SecureIbex ? fetch_enable_i == ibex_pkg_IbexMuBiOn : fetch_enable_i[0]);
 	assign csr_wdata = alu_operand_a_ex;
 	ibex_cs_registers #(
 		.DbgTriggerEn(DbgTriggerEn),
@@ -3046,79 +2975,6 @@ module ibex_core (
 	assign unused_instr_done_wb = instr_done_wb;
 	assign unused_instr_expanded_id = ^instr_expanded_id;
 	assign unused_instr_gets_expanded_id = ^instr_gets_expanded_id;
-	initial begin : IllegalParamSecure
-		
-	end
-	wire fcov_rf_ecc_err_a_id;
-	generate
-		if (RegFileECC) begin : g_fcov_rf_ecc_err_a_id
-			assign fcov_rf_ecc_err_a_id = gen_regfile_ecc.rf_ecc_err_a_id;
-		end
-		else begin : g_no_fcov_rf_ecc_err_a_id
-			assign fcov_rf_ecc_err_a_id = 1'sb0;
-		end
-	endgenerate
-	wire unused_fcov_rf_ecc_err_a_id;
-	assign unused_fcov_rf_ecc_err_a_id = fcov_rf_ecc_err_a_id;
-	wire fcov_rf_ecc_err_b_id;
-	generate
-		if (RegFileECC) begin : g_fcov_rf_ecc_err_b_id
-			assign fcov_rf_ecc_err_b_id = gen_regfile_ecc.rf_ecc_err_b_id;
-		end
-		else begin : g_no_fcov_rf_ecc_err_b_id
-			assign fcov_rf_ecc_err_b_id = 1'sb0;
-		end
-	endgenerate
-	wire unused_fcov_rf_ecc_err_b_id;
-	assign unused_fcov_rf_ecc_err_b_id = fcov_rf_ecc_err_b_id;
-	wire fcov_csr_read_only;
-	assign fcov_csr_read_only = ((csr_op == 2'd0) && csr_access) && (csr_op_en || illegal_insn_id);
-	wire unused_fcov_csr_read_only;
-	assign unused_fcov_csr_read_only = fcov_csr_read_only;
-	wire fcov_csr_write;
-	assign fcov_csr_write = (cs_registers_i.csr_wr && csr_access) && (csr_op_en || illegal_insn_id);
-	wire unused_fcov_csr_write;
-	assign unused_fcov_csr_write = fcov_csr_write;
-	localparam [31:0] ibex_pkg_PMP_CFG_W = 8;
-	generate
-		if (PMPEnable) begin : g_pmp_fcov_signals
-			wire [PMPNumRegions - 1:0] fcov_pmp_region_ichan_priority;
-			wire [PMPNumRegions - 1:0] fcov_pmp_region_ichan2_priority;
-			wire [PMPNumRegions - 1:0] fcov_pmp_region_dchan_priority;
-			wire unused_fcov_pmp_region_priority;
-			assign unused_fcov_pmp_region_priority = ^{fcov_pmp_region_ichan_priority, fcov_pmp_region_ichan2_priority, fcov_pmp_region_dchan_priority};
-			genvar _gv_i_region_1;
-			for (_gv_i_region_1 = 0; _gv_i_region_1 < PMPNumRegions; _gv_i_region_1 = _gv_i_region_1 + 1) begin : g_pmp_region_fcov
-				localparam i_region = _gv_i_region_1;
-				wire fcov_pmp_region_ichan_access;
-				assign fcov_pmp_region_ichan_access = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I][i_region] & if_stage_i.if_id_pipe_reg_we;
-				wire unused_fcov_pmp_region_ichan_access;
-				assign unused_fcov_pmp_region_ichan_access = fcov_pmp_region_ichan_access;
-				wire fcov_pmp_region_ichan2_access;
-				assign fcov_pmp_region_ichan2_access = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I2][i_region] & if_stage_i.if_id_pipe_reg_we;
-				wire unused_fcov_pmp_region_ichan2_access;
-				assign unused_fcov_pmp_region_ichan2_access = fcov_pmp_region_ichan2_access;
-				wire fcov_pmp_region_dchan_access;
-				assign fcov_pmp_region_dchan_access = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_D][i_region] & data_req_out;
-				wire unused_fcov_pmp_region_dchan_access;
-				assign unused_fcov_pmp_region_dchan_access = fcov_pmp_region_dchan_access;
-				wire fcov_warl_check_pmpcfg;
-				assign fcov_warl_check_pmpcfg = fcov_csr_write && (cs_registers_i.g_pmp_registers.g_pmp_csrs[i_region].u_pmp_cfg_csr.wr_data_i != {cs_registers_i.csr_wdata_int[(i_region % 4) * ibex_pkg_PMP_CFG_W+:5], cs_registers_i.csr_wdata_int[((i_region % 4) * ibex_pkg_PMP_CFG_W) + 7]});
-				wire unused_fcov_warl_check_pmpcfg;
-				assign unused_fcov_warl_check_pmpcfg = fcov_warl_check_pmpcfg;
-				if (i_region > 0) begin : g_region_priority
-					assign fcov_pmp_region_ichan_priority[i_region] = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I][i_region] & ~|g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I][i_region - 1:0];
-					assign fcov_pmp_region_ichan2_priority[i_region] = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I2][i_region] & ~|g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I2][i_region - 1:0];
-					assign fcov_pmp_region_dchan_priority[i_region] = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_D][i_region] & ~|g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_D][i_region - 1:0];
-				end
-				else begin : g_region_highest_priority
-					assign fcov_pmp_region_ichan_priority[i_region] = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I][i_region];
-					assign fcov_pmp_region_ichan2_priority[i_region] = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_I2][i_region];
-					assign fcov_pmp_region_dchan_priority[i_region] = g_pmp.pmp_i.region_match_all[ibex_pkg_PMP_D][i_region];
-				end
-			end
-		end
-	endgenerate
 endmodule
 module ibex_counter (
 	clk_i,
@@ -4121,9 +3977,6 @@ module ibex_cs_registers (
 					.rd_data_o(pmp_addr[i]),
 					.rd_error_o(pmp_addr_err[i])
 				);
-				initial begin : PMPAddrRstLowBitsZero_A
-					
-				end
 				assign csr_pmp_cfg_o[((PMPNumRegions - 1) - i) * 6+:6] = pmp_cfg[i];
 				assign csr_pmp_addr_o[0 + (((PMPNumRegions - 1) - i) * 34)+:34] = {pmp_addr_rdata[i], 2'b00};
 			end
@@ -5703,20 +5556,6 @@ module ibex_ex_block (
 		end
 	endgenerate
 	assign ex_valid_o = (multdiv_sel ? multdiv_valid : ~(|alu_imd_val_we));
-	wire sva_multdiv_fsm_idle;
-	generate
-		if (RV32M == 32'sd1) begin : gen_multdiv_sva_idle_slow
-			assign sva_multdiv_fsm_idle = gen_multdiv_slow.multdiv_i.sva_fsm_idle;
-		end
-		else if ((RV32M == 32'sd2) || (RV32M == 32'sd3)) begin : gen_multdiv_sva_idle_fast
-			assign sva_multdiv_fsm_idle = gen_multdiv_fast.multdiv_i.sva_fsm_idle;
-		end
-		else begin : gen_multdiv_sva_idle_none
-			assign sva_multdiv_fsm_idle = 1'b1;
-		end
-	endgenerate
-	wire unused_sva_multdiv_fsm_idle;
-	assign unused_sva_multdiv_fsm_idle = sva_multdiv_fsm_idle;
 endmodule
 module ibex_fetch_fifo (
 	clk_i,
@@ -6851,15 +6690,6 @@ module ibex_icache (
 		end
 	endgenerate
 	assign busy_o = inval_active | (|(fill_busy_q & ~fill_rvd_done));
-	initial begin : size_param_legal
-		
-	end
-	initial begin : ecc_tag_param_legal
-		
-	end
-	initial begin : ecc_data_param_legal
-		
-	end
 	initial _sv2v_0 = 0;
 endmodule
 module ibex_id_stage (
@@ -7647,25 +7477,6 @@ module ibex_id_stage (
 	assign en_wb_o = instr_done;
 	assign perf_mul_wait_o = stall_multdiv & mult_en_dec;
 	assign perf_div_wait_o = stall_multdiv & div_en_dec;
-	wire fcov_rf_rd_wb_hz;
-	generate
-		if (WritebackStage) begin : g_fcov_rf_rd_wb_hz
-			assign fcov_rf_rd_wb_hz = (gen_stall_mem.rf_rd_a_hz | gen_stall_mem.rf_rd_b_hz) & instr_valid_i;
-		end
-		else begin : g_no_fcov_rf_rd_wb_hz
-			assign fcov_rf_rd_wb_hz = 1'sb0;
-		end
-	endgenerate
-	wire unused_fcov_rf_rd_wb_hz;
-	assign unused_fcov_rf_rd_wb_hz = fcov_rf_rd_wb_hz;
-	wire fcov_branch_taken;
-	assign fcov_branch_taken = (instr_executing & (id_fsm_q == 1'd0)) & branch_decision_i;
-	wire unused_fcov_branch_taken;
-	assign unused_fcov_branch_taken = fcov_branch_taken;
-	wire fcov_branch_not_taken;
-	assign fcov_branch_not_taken = (instr_executing & (id_fsm_q == 1'd0)) & ~branch_decision_i;
-	wire unused_fcov_branch_not_taken;
-	assign unused_fcov_branch_not_taken = fcov_branch_not_taken;
 	initial _sv2v_0 = 0;
 endmodule
 module ibex_if_stage (
@@ -8016,16 +7827,6 @@ module ibex_if_stage (
 			assign ic_data_wdata_o = 'b0;
 			assign ic_scr_key_req_o = 'b0;
 			assign icache_ecc_error_o = 'b0;
-			function automatic signed [31:0] simutil_get_scramble_key;
-				input reg _sv2v_unused;
-				output reg [127:0] val;
-				simutil_get_scramble_key = 0;
-			endfunction
-			function automatic signed [31:0] simutil_get_scramble_nonce;
-				input reg _sv2v_unused;
-				output reg [319:0] nonce;
-				simutil_get_scramble_nonce = 0;
-			endfunction
 		end
 	endgenerate
 	assign unused_fetch_addr_n0 = fetch_addr_n[0];
@@ -8255,73 +8056,6 @@ module ibex_if_stage (
 			assign if_instr_addr = fetch_addr;
 			assign if_instr_bus_err = fetch_err;
 			assign fetch_ready = (id_in_ready_i & ~stall_dummy_instr) & (instr_gets_expanded != 2'd1);
-		end
-	endgenerate
-	wire [1:0] fcov_dummy_instr_type;
-	generate
-		if (DummyInstructions) begin : g_fcov_dummy_instr_type
-			assign fcov_dummy_instr_type = gen_dummy_instr.dummy_instr_i.lfsr_data.instr_type;
-		end
-		else begin : g_no_fcov_dummy_instr_type
-			assign fcov_dummy_instr_type = 1'sb0;
-		end
-	endgenerate
-	wire [1:0] unused_fcov_dummy_instr_type;
-	assign unused_fcov_dummy_instr_type = fcov_dummy_instr_type;
-	wire fcov_insert_dummy_instr;
-	generate
-		if (DummyInstructions) begin : g_fcov_insert_dummy_instr
-			assign fcov_insert_dummy_instr = gen_dummy_instr.insert_dummy_instr;
-		end
-		else begin : g_no_fcov_insert_dummy_instr
-			assign fcov_insert_dummy_instr = 1'sb0;
-		end
-	endgenerate
-	wire unused_fcov_insert_dummy_instr;
-	assign unused_fcov_insert_dummy_instr = fcov_insert_dummy_instr;
-	generate
-		if (BranchPredictor) begin : g_branch_predictor_asserts
-			reg predicted_branch_live_q;
-			reg predicted_branch_live_d;
-			reg [31:0] predicted_branch_nt_pc_q;
-			wire [31:0] predicted_branch_nt_pc_d;
-			wire [31:0] awaiting_instr_after_mispredict_q;
-			wire [31:0] awaiting_instr_after_mispredict_d;
-			wire [31:0] next_pc;
-			wire mispredicted;
-			reg mispredicted_d;
-			reg mispredicted_q;
-			assign next_pc = fetch_addr + (instr_is_compressed_out ? 32'd2 : 32'd4);
-			wire predicted_branch;
-			assign predicted_branch = predict_branch_taken & ~pc_set_i;
-			always @(*) begin
-				if (_sv2v_0)
-					;
-				predicted_branch_live_d = predicted_branch_live_q;
-				mispredicted_d = mispredicted_q;
-				if (branch_req & predicted_branch) begin
-					predicted_branch_live_d = 1'b1;
-					mispredicted_d = 1'b0;
-				end
-				else if (predicted_branch_live_q) begin
-					if (fetch_valid & fetch_ready)
-						predicted_branch_live_d = 1'b0;
-					else if (nt_branch_mispredict_i)
-						mispredicted_d = 1'b1;
-				end
-			end
-			always @(posedge clk_i or negedge rst_ni)
-				if (!rst_ni) begin
-					predicted_branch_live_q <= 1'b0;
-					mispredicted_q <= 1'b0;
-				end
-				else begin
-					predicted_branch_live_q <= predicted_branch_live_d;
-					mispredicted_q <= mispredicted_d;
-				end
-			always @(posedge clk_i)
-				if (branch_req & predicted_branch)
-					predicted_branch_nt_pc_q <= next_pc;
 		end
 	endgenerate
 	initial _sv2v_0 = 0;
@@ -8730,49 +8464,6 @@ module ibex_load_store_unit (
 	assign load_resp_intg_err_o = (data_intg_err & data_rvalid_i) & ~data_we_q;
 	assign store_resp_intg_err_o = (data_intg_err & data_rvalid_i) & data_we_q;
 	assign busy_o = ls_fsm_cs != 3'd0;
-	wire fcov_mis_2_en_d;
-	reg fcov_mis_2_en_q;
-	wire fcov_mis_rvalid_1;
-	wire fcov_mis_rvalid_2;
-	wire fcov_mis_bus_err_1_d;
-	reg fcov_mis_bus_err_1_q;
-	assign fcov_mis_rvalid_1 = |{ls_fsm_cs == 3'd2, ls_fsm_cs == 3'd4} && data_rvalid_i;
-	assign fcov_mis_rvalid_2 = ((ls_fsm_cs == 3'd0) && fcov_mis_2_en_q) && data_rvalid_i;
-	assign fcov_mis_2_en_d = (fcov_mis_rvalid_2 ? 1'b0 : (fcov_mis_rvalid_1 ? 1'b1 : fcov_mis_2_en_q));
-	assign fcov_mis_bus_err_1_d = (fcov_mis_rvalid_2 ? 1'b0 : (fcov_mis_rvalid_1 && data_bus_err_i ? 1'b1 : fcov_mis_bus_err_1_q));
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni) begin
-			fcov_mis_2_en_q <= 1'b0;
-			fcov_mis_bus_err_1_q <= 1'b0;
-		end
-		else begin
-			fcov_mis_2_en_q <= fcov_mis_2_en_d;
-			fcov_mis_bus_err_1_q <= fcov_mis_bus_err_1_d;
-		end
-	wire fcov_ls_error_exception;
-	assign fcov_ls_error_exception = (load_err_o | store_err_o) & ~pmp_err_q;
-	wire unused_fcov_ls_error_exception;
-	assign unused_fcov_ls_error_exception = fcov_ls_error_exception;
-	wire fcov_ls_pmp_exception;
-	assign fcov_ls_pmp_exception = (load_err_o | store_err_o) & pmp_err_q;
-	wire unused_fcov_ls_pmp_exception;
-	assign unused_fcov_ls_pmp_exception = fcov_ls_pmp_exception;
-	wire fcov_ls_first_req;
-	assign fcov_ls_first_req = lsu_req_i & (ls_fsm_cs == 3'd0);
-	wire unused_fcov_ls_first_req;
-	assign unused_fcov_ls_first_req = fcov_ls_first_req;
-	wire fcov_ls_second_req;
-	assign fcov_ls_second_req = ((ls_fsm_cs == 3'd2) & data_req_o) & addr_incr_req_o;
-	wire unused_fcov_ls_second_req;
-	assign unused_fcov_ls_second_req = fcov_ls_second_req;
-	wire fcov_ls_mis_pmp_err_1;
-	assign fcov_ls_mis_pmp_err_1 = |{ls_fsm_cs == 3'd2, ls_fsm_cs == 3'd1} && pmp_err_q;
-	wire unused_fcov_ls_mis_pmp_err_1;
-	assign unused_fcov_ls_mis_pmp_err_1 = fcov_ls_mis_pmp_err_1;
-	wire fcov_ls_mis_pmp_err_2;
-	assign fcov_ls_mis_pmp_err_2 = |{ls_fsm_cs == 3'd2, ls_fsm_cs == 3'd4} && data_pmp_err_i;
-	wire unused_fcov_ls_mis_pmp_err_2;
-	assign unused_fcov_ls_mis_pmp_err_2 = fcov_ls_mis_pmp_err_2;
 	initial _sv2v_0 = 0;
 endmodule
 module ibex_multdiv_fast (
@@ -9173,10 +8864,8 @@ module ibex_multdiv_fast (
 		endcase
 	end
 	assign valid_o = mult_valid | div_valid;
-	wire sva_fsm_idle;
-	wire unused_sva_fsm_idle;
-	assign sva_fsm_idle = (md_state_q == 3'd0) && sva_mul_fsm_idle;
-	assign unused_sva_fsm_idle = sva_fsm_idle;
+	wire unused_sva_mul_fsm_idle;
+	assign unused_sva_mul_fsm_idle = sva_mul_fsm_idle;
 	initial _sv2v_0 = 0;
 endmodule
 module ibex_multdiv_slow (
@@ -9458,10 +9147,6 @@ module ibex_multdiv_slow (
 		end
 	assign valid_o = (md_state_q == 3'd6) | ((md_state_q == 3'd4) & ((operator_i == 2'd0) | (operator_i == 2'd1)));
 	assign multdiv_result_o = (div_en_i ? accum_window_q[31:0] : res_adder_l[31:0]);
-	wire sva_fsm_idle;
-	wire unused_sva_fsm_idle;
-	assign sva_fsm_idle = md_state_q == 3'd0;
-	assign unused_sva_fsm_idle = sva_fsm_idle;
 	initial _sv2v_0 = 0;
 endmodule
 module ibex_pmp (
@@ -9622,10 +9307,6 @@ module ibex_pmp (
 			assign debug_mode_allowed_access[c] = debug_mode_i & ((pmp_req_addr_i[(((PMPNumChan - 1) - c) * 34) + 31-:32] & ~DmAddrMask) == DmBaseAddr);
 			assign access_fault_check_res[c] = access_fault_check(csr_pmp_mseccfg_i[1], csr_pmp_mseccfg_i[0], pmp_req_type_i[((PMPNumChan - 1) - c) * 2+:2], region_match_all[c * PMPNumRegions+:PMPNumRegions], priv_mode_i[((PMPNumChan - 1) - c) * 2+:2], region_perm_check[c * PMPNumRegions+:PMPNumRegions]);
 			assign pmp_req_err_o[c] = ~debug_mode_allowed_access[c] & access_fault_check_res[c];
-			wire fcov_pmp_region_override;
-			assign fcov_pmp_region_override = ~pmp_req_err_o[c] & |(region_match_all[c * PMPNumRegions+:PMPNumRegions] & ~region_perm_check[c * PMPNumRegions+:PMPNumRegions]);
-			wire unused_fcov_pmp_region_override;
-			assign unused_fcov_pmp_region_override = fcov_pmp_region_override;
 		end
 	endgenerate
 	wire unused_csr_pmp_mseccfg_rlb;
@@ -10127,7 +9808,6 @@ module ibex_top (
 	instr_req_shadow_o,
 	instr_addr_shadow_o
 );
-	reg _sv2v_0;
 	parameter [0:0] PMPEnable = 1'b0;
 	parameter [31:0] PMPGranularity = 0;
 	parameter [31:0] PMPNumRegions = 4;
@@ -10629,12 +10309,6 @@ module ibex_top (
 						.write_pending_o(),
 						.alert_o(icache_data_alert[way])
 					);
-					reg [127:0] sampled_scramble_key;
-					always @(posedge clk_i or negedge rst_ni)
-						if (!rst_ni)
-							sampled_scramble_key <= 1'sbx;
-						else if (scramble_key_valid_i)
-							sampled_scramble_key <= scramble_key_i;
 				end
 				else begin : gen_noscramble_rams
 					prim_ram_1p #(
@@ -10901,71 +10575,6 @@ module ibex_top (
 	assign alert_major_internal_o = (core_alert_major_internal | lockstep_alert_major_internal) | icache_alert_major_internal;
 	assign alert_major_bus_o = core_alert_major_bus | lockstep_alert_major_bus;
 	assign alert_minor_o = core_alert_minor | lockstep_alert_minor;
-	localparam [31:0] MaxOutstandingDSideAccesses = 2;
-	reg [1:0] pending_dside_accesses_q [0:1];
-	reg [1:0] pending_dside_accesses_d [0:1];
-	reg [1:0] pending_dside_accesses_shifted [0:1];
-	genvar _gv_i_35;
-	generate
-		for (_gv_i_35 = 0; _gv_i_35 < MaxOutstandingDSideAccesses; _gv_i_35 = _gv_i_35 + 1) begin : g_dside_tracker
-			localparam i = _gv_i_35;
-			always @(posedge clk or negedge rst_ni)
-				if (!rst_ni)
-					pending_dside_accesses_q[i] <= 1'sb0;
-				else
-					pending_dside_accesses_q[i] <= pending_dside_accesses_d[i];
-			always @(*) begin
-				if (_sv2v_0)
-					;
-				pending_dside_accesses_shifted[i] = pending_dside_accesses_q[i];
-				if (data_rvalid_i) begin
-					if (i != 1)
-						pending_dside_accesses_shifted[i] = pending_dside_accesses_q[i + 1];
-					else
-						pending_dside_accesses_shifted[i] = 1'sb0;
-				end
-			end
-			if (i == 0) begin : g_track_first_entry
-				always @(*) begin
-					if (_sv2v_0)
-						;
-					pending_dside_accesses_d[i] = pending_dside_accesses_shifted[i];
-					if ((data_req_o && data_gnt_i) && !pending_dside_accesses_shifted[i][1]) begin
-						pending_dside_accesses_d[i][1] = 1'b1;
-						pending_dside_accesses_d[i][0] = ~data_we_o;
-					end
-				end
-			end
-			else begin : g_track_other_entries
-				always @(*) begin
-					if (_sv2v_0)
-						;
-					pending_dside_accesses_d[i] = pending_dside_accesses_shifted[i];
-					if (((data_req_o && data_gnt_i) && pending_dside_accesses_shifted[i - 1][1]) && !pending_dside_accesses_shifted[i][1]) begin
-						pending_dside_accesses_d[i][1] = 1'b1;
-						pending_dside_accesses_d[i][0] = ~data_we_o;
-					end
-				end
-			end
-		end
-		if (MemECC) begin : g_mem_ecc_asserts
-			wire [1:0] data_ecc_err;
-			wire [1:0] instr_ecc_err;
-			prim_secded_inv_39_32_dec u_data_intg_dec(
-				.data_i(data_rdata_core),
-				.data_o(),
-				.syndrome_o(),
-				.err_o(data_ecc_err)
-			);
-			prim_secded_inv_39_32_dec u_instr_intg_dec(
-				.data_i(instr_rdata_core),
-				.data_o(),
-				.syndrome_o(),
-				.err_o(instr_ecc_err)
-			);
-		end
-	endgenerate
-	initial _sv2v_0 = 0;
 endmodule
 module ibex_wb_stage (
 	clk_i,
@@ -11155,15 +10764,4 @@ module ibex_wb_stage (
 	assign rf_wdata_wb_mux[1] = rf_wdata_lsu_i;
 	assign rf_wdata_wb_o = ({32 {rf_wdata_wb_mux_we[0]}} & rf_wdata_wb_mux[0]) | ({32 {rf_wdata_wb_mux_we[1]}} & rf_wdata_wb_mux[1]);
 	assign rf_we_wb_o = |rf_wdata_wb_mux_we;
-	wire fcov_wb_valid;
-	generate
-		if (WritebackStage) begin : g_fcov_wb_valid
-			assign fcov_wb_valid = g_writeback_stage.wb_valid_q;
-		end
-		else begin : g_no_fcov_wb_valid
-			assign fcov_wb_valid = 1'sb0;
-		end
-	endgenerate
-	wire unused_fcov_wb_valid;
-	assign unused_fcov_wb_valid = fcov_wb_valid;
 endmodule

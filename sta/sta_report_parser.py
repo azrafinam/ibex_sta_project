@@ -62,11 +62,10 @@ def parse_paths(report_path):
                 current['path_type'] = 'hold' if 'min' in s.lower() else 'setup'
 
             # TODO 8 — Extract slack value and violated flag.
-            elif 'slack' in s.lower():
+            elif re.search(r'^-?\d+\.\d+\s+slack\b', s, re.IGNORECASE):
                 current['violated'] = 'VIOLATED' in s
                 m = re.search(r'(-?\d+\.\d+)', s)
-                if m:
-                    current['slack'] = float(m.group(1))
+                current['slack'] = float(m.group(1))
 
     # Append the last path if it has required fields:
     if current and 'startpoint' in current and 'slack' in current:

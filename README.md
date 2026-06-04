@@ -1,118 +1,125 @@
 # End-to-End STA Parser Construction from Ibex RTL Source
 
-**Design:** ibex_core (32-bit RISC-V CPU)  ( https://github.com/lowRISC/ibex# )
+**Design:** ibex_core (32-bit RISC-V CPU) — [lowRISC Ibex](https://github.com/lowRISC/ibex)  
+**PDK:** sky130A (`sky130_fd_sc_hd`)  
+**Tools:** sv2v v0.0.13 · Yosys 0.33 · OpenSTA 3.1.0 · Python 3.13  
+**Clock period:** 20 ns  
 
-**PDK:** sky130A  
-**Tool:** OpenSTA 2.4 (in Docker) + OpenLane  
-**Clock Period:** 20 ns  
 
-## Repository Structure
+## Repository structure
 
 ```
-# ibex_sta_project
-
 ibex_sta_project/
-├── include/                           # Primitive library headers and utility includes (150+ files covering DV macros, CDC logic, cryptographic primitives, FIFOs, clocking, synchronization, memory models, and verification utilities used across the Ibex design)
-│   ├── dv_*.svh                       # Design verification macros and functional coverage utilities
-│   └── prim_*.sv                      # Low-level primitive cells, cryptographic cores, synchronizers, and system modules
+├── rtl/                              # Ibex SystemVerilog (from ~/Desktop/ibex-master/rtl)
+│   ├── ibex_core.sv                  # Top-level core module
+│   ├── ibex_*.sv                     # Pipeline, ALU, LSU, CSRs, fetch, etc.
+│   └── ibex_core.f                   # Synthesis file list (subset for STA)
 │
-├── rtl/                               # SystemVerilog RTL source files for ibex_core (30+ files implementing the 5-stage pipeline, ALU, CSRs, register files, instruction decoder, and system protection features)
-│   ├── ibex_*.sv                      # Core processor modules: pipeline stages, ALU, LSU, controller, register files, caches, multiplier/divider
-│   └── ibex_core.f                    # File manifest listing all RTL sources in compilation order
+├── include/                          # LowRISC prim + DV headers (from ibex-master vendor)
+│   ├── prim_*.sv / prim_*.svh        # Primitive cells, packages, assert macros
+│   └── dv_*.svh                      # DV / coverage macro headers
 │
-├── sta/                               # STA flow scripts, reports, parser tools, and validation (OpenSTA-based timing analysis on sky130A PDK)
-│   ├── constraints.sdc                # Timing constraints: clock period (20ns), uncertainty (0.25ns), input/output delays, slew rates, and loads
-│   ├── ibex_ss.txt                    # Slow-Slow STA report (ss_100C_1v60 corner: WNS = -38.35 ns, TNS = -31456.90 ns, 7522 violations)
-│   ├── ibex_tt.txt                    # Typical-Typical STA report (tt_025C_1v80 corner: WNS = -9.04 ns, TNS = -3743.60 ns, 4366 violations)
-│   ├── ibex_sta_tables.md             # Annotated timing path analysis with format documentation and parser validation tables
-│   ├── sta_findings.md                # Comprehensive STA findings, critical path analysis, and remediation recommendations
-│   ├── parser_schema.md               # Function specifications: extract_summary(), parse_paths(), count_by_module(), print_summary()
-│   ├── run_sta.tcl                    # Generic OpenSTA script template
-│   ├── run_sta_ss.tcl                 # OpenSTA script for Slow-Slow corner analysis
-│   ├── run_sta_tt.tcl                 # OpenSTA script for Typical-Typical corner analysis
-│   ├── sta_report_parser.py           # Python parser: regex-based extraction of STA metrics
-│   └── verify_sta_parser.py           # Validation suite: compares parser output with reference grep results
+├── synth/                            # sv2v + Yosys — all netlists live here (no netlist/)
+│   ├── ibex_core.v                   # Verilog-2005 RTL after sv2v (-D SYNTHESIS)
+│   ├── ibex_synth.v                  # SKY130 HD gate-level netlist (OpenSTA input)
+│   └── synth.tcl                     # Yosys: proc → techmap → dfflibmap → abc
 │
-├── synth/                             # Synthesis outputs and synthesis flow scripts (Yosys-based RTL-to-gates compilation on sky130_fd_sc_hd standard cells)
-│   ├── ibex_core.v                    # Gate-level netlist (core only)
-│   ├── ibex_synth.v                   # Full flattened netlist
-│   └── synth.tcl                      # Yosys synthesis automation script
+├── sta/                              # OpenSTA reports, constraints, parser tools
+│   ├── ibex_tt.txt                   # TT corner report (tt_025C_1v80)
+│   ├── ibex_ss.txt                   # SS corner report (ss_100C_1v60)
+│   ├── constraints.sdc               # 20 ns clock, uncertainty, I/O delays
+│   ├── run_sta_tt.tcl                # OpenSTA script — TT Liberty + ibex_synth.v
+│   ├── run_sta_ss.tcl                # OpenSTA script — SS Liberty + ibex_synth.v
+│   ├── run_sta.tcl                   # Generic template (edit LIB/NETLIST/TOP)
+│   ├── sta_report_parser.py          # extract_summary, parse_paths, count_by_module
+│   ├── verify_sta_parser.py          # Automated grep cross-check (7 checks)
+│   └── parser_schema.md              # Return-type contract for parser functions
 │
-└── README.md                          # Project overview, results summary, and documentation entry point for the entire STA flow project
+├── reports/                          # Markdown analysis and curriculum proof
+│   ├── sta_findings.md               # Day 5 — 10-point submission table (ibex; GPU N/A)
+│   ├── ibex_sta_tables.md            # Day 0/1/3 — ground truth, path annotation, validation
+│   └── CURRICULUM_VERIFICATION.md    # Day 0–5 check commands + captured outputs
+│
+├── logs/                             # Flow documentation and issue log
+│   └── RTL_TO_STA_FLOW.md            # sv2v → Yosys → OpenSTA pipeline + fixes table
+│
+├── reproduce/                        # Rebuild flow from ~/Desktop/ibex-master
+│   ├── REPRODUCE.md                  # Canonical step-by-step terminal commands
+│   ├── setup_from_ibex.sh            # Auto-copy rtl, include, write Tcl/lists
+│   ├── run_flow.sh                   # sv2v → Yosys → OpenSTA → .txt reports
+│   ├── run_curriculum_checks.sh      # Re-run Day 0/3/4 acceptance checks
+│   ├── sync_to_main.sh               # Copy artifacts from ~/Project_STA
+│   ├── pkg_list.txt                  # sv2v package compile order
+│   ├── rtl_list.txt                  # sv2v module list (no tracer/lockstep)
+│   └── scripts/                      # Template synth.tcl + SDC + run_sta_*.tcl
+│
+└── README.md                         # This file — overview and quick reference
 ```
-    
-## Results Summary
+
+---
+
+## Results summary
 
 | Metric | TT (tt_025C_1v80) | SS (ss_100C_1v60) |
-|--------|-------------------|-------------------|
-| WNS (ns) | -9.04 | -38.35 |
-| TNS (ns) | -3,743.60 | -31,456.90 |
-| Violations | 4,366 | 7,522 |
-| Paths Analyzed | 60 | 60 |
-| Timing Met | NO | NO |
-| Critical Module | gen_prefetch_buffer.prefetch_buffer_i | gen_prefetch_buffer.prefetch_buffer_i |
+|:---|:---:|:---:|
+| WNS (ns) | −8.65 | −37.66 |
+| TNS (ns) | −3,846.05 | −31,690.22 |
+| Violations | 4,486 | 7,458 |
+| Paths parsed | 60 | 60 |
+| Timing met | No | No |
+| Critical module | gen_prefetch_buffer.prefetch_buffer_i | gen_prefetch_buffer.prefetch_buffer_i |
+| WNS delta (SS − TT) | −29.01 ns | |
 
-## STA Findings & Analysis
+## Quick verification (curriculum checks)
 
-### Timing Violations Overview
+```bash
+cd ~/ibex_sta_project
+bash reproduce/run_curriculum_checks.sh
+```
 
-The ibex_core design exhibits significant timing violations across all process corners analyzed:
+Full command transcript and outputs: [reports/CURRICULUM_VERIFICATION.md](reports/CURRICULUM_VERIFICATION.md)
 
-#### Slow-Slow (SS) Corner (ss_100C_1v60)
-- **Worst Negative Slack (WNS):** -38.35 ns
-- **Total Negative Slack (TNS):** -31,456.90 ns
-- **Total Violations:** 7,522 paths
-- **Severity:** Critical — design fails to meet 20 ns clock period by significant margin
+```bash
+cd sta
+python3 sta_report_parser.py ibex_tt.txt ibex_ss.txt
+python3 verify_sta_parser.py ibex_tt.txt ibex_ss.txt   # expect: FINAL: 2/2 passed
+```
 
-#### Typical-Typical (TT) Corner (tt_025C_1v80)
-- **Worst Negative Slack (WNS):** -9.04 ns
-- **Total Negative Slack (TNS):** -3,743.60 ns
-- **Total Violations:** 4,366 paths
-- **Severity:** High — approximately 45% fewer violations than SS corner but still substantial
 
-### Critical Path Analysis
+## Reproduce STA reports from ibex-master
 
-Both process corners identify the **gen_prefetch_buffer.prefetch_buffer_i** module as the critical region:
-- This submodule contributes the largest share of timing violations
-- Paths through the prefetch buffer logic are on the critical path
-- Potential root causes: deep combinational logic, high fan-out signals, or suboptimal placement/routing in synthesis
+```bash
+cd ~/ibex_sta_project
+bash reproduce/setup_from_ibex.sh
+bash reproduce/run_flow.sh
+```
 
-### Key Observations
+Details: [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md)
 
-1. **PVT Variation Impact:** The 29.31 ns difference in WNS between corners demonstrates significant process-voltage-temperature (PVT) sensitivity
-2. **Systematic Violations:** 4,366+ violations at TT (mild corner) suggest fundamental design/implementation issues rather than marginal timing failures
-3. **Clock Period Feasibility:** The 20 ns clock period may be too aggressive for the current sky130A technology node given the design complexity of ibex_core
 
-### Parser Validation
+## Documentation index
 
-The STA report parser successfully validates all findings:
-- ✓ WNS extraction: PASS (verified against raw STA output)
-- ✓ TNS extraction: PASS
-- ✓ Violation counting: PASS
-- ✓ Path parsing (60 paths per corner): PASS
-- ✓ Module ranking: PASS
-- ✓ Verifier: 2/2 reports ALL PASS
+| Document | Purpose |
+|:---|:---|
+| [reports/sta_findings.md](reports/sta_findings.md) | Submission table (10 points) |
+| [reports/ibex_sta_tables.md](reports/ibex_sta_tables.md) | Ground truth + format study + parser validation |
+| [reports/CURRICULUM_VERIFICATION.md](reports/CURRICULUM_VERIFICATION.md) | Instruction checklist with proof outputs |
+| [logs/RTL_TO_STA_FLOW.md](logs/RTL_TO_STA_FLOW.md) | RTL-to-STA methodology and resolved issues |
+| [sta/parser_schema.md](sta/parser_schema.md) | Parser API contract |
+| [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md) | Exact reproduction commands |
 
-## Documentation
-
-Comprehensive documentation is provided through the following markdown files:
-
-- **[sta_findings.md](sta/sta_findings.md)** — Detailed STA findings, critical path analysis, bottleneck identification, and remediation strategies
-- **[ibex_sta_tables.md](sta/ibex_sta_tables.md)** — Annotated timing path tables with raw STA metrics, path endpoint analysis, and parser validation reference data
-- **[parser_schema.md](sta/parser_schema.md)** — API documentation for STA report parser functions with return types and usage examples
-- **README.md** — This file; project overview and results summary
 
 ## Deliverables
 
-- **sta_report_parser.py** — 4 functions (extract_summary, parse_paths, count_by_module, print_summary)
-- **verify_sta_parser.py** — 10 automated checks
-- **ibex_tt.txt, ibex_ss.txt** — Real STA reports (30+ paths each)
-- **ibex_sta_tables.md** — Detailed path analysis and timing metrics
-- **sta_findings.md** — Comprehensive STA analysis and recommendations
-- **parser_schema.md** — Return type specifications and function documentation
-- **constraints.sdc** — Timing constraints used for analysis
-- Complete RTL and synthesis deliverables
+| File | Acceptance |
+|:---|:---|
+| `sta/ibex_tt.txt`, `sta/ibex_ss.txt` | Non-empty; WNS, TNS, Startpoint: lines |
+| `sta/sta_report_parser.py` | 4 functions; matches grep ground truth |
+| `sta/verify_sta_parser.py` | **2/2 ALL PASS** on ibex reports |
+| `reports/sta_findings.md` | All 10 points (GPU columns N/A) |
+| `reports/CURRICULUM_VERIFICATION.md` | Check commands + outputs |
+
 
 ## Conclusion
 
-The STA parser successfully extracts and validates timing metrics from real synthesis reports of ibex_core on sky130A PDK. The design exhibits critical timing violations at both process corners, with the Slow-Slow corner being the most constrained. The prefetch_buffer submodule is identified as the primary bottleneck. Remediation strategies may include pipeline restructuring, critical path optimization, increased frequency margin (clock period relaxation), or cell-level optimizations in high-violation modules. Refer to [sta_findings.md](sta/sta_findings.md) for detailed analysis and recommendations.
+The STA parser extracts and validates ibex_core timing from real sky130A synthesis reports. Both corners fail timing; the prefetch buffer dominates violations. SS WNS is 29.01 ns worse than TT. See [reports/sta_findings.md](reports/sta_findings.md) and [reports/CURRICULUM_VERIFICATION.md](reports/CURRICULUM_VERIFICATION.md) for submission-ready numbers and proof.
