@@ -6,6 +6,32 @@
 **Tool:** OpenSTA 2.4 (in Docker) + OpenLane  
 **Clock Period:** 20 ns  
 
+## Repository Structure
+
+ibex_sta_project/
+├── README.md
+├── include/
+│   ├── dv_*.svh
+│   └── prim_*.sv
+├── rtl/
+│   ├── ibex_*.sv
+│   └── ibex_core.f
+├── sta/
+│   ├── constraints.sdc
+│   ├── ibex_ss.txt
+│   ├── ibex_sta_tables.md
+│   ├── ibex_tt.txt
+│   ├── parser_schema.md
+│   ├── run_sta.tcl
+│   ├── run_sta_ss.tcl
+│   ├── run_sta_tt.tcl
+│   ├── sta_report_parser.py
+│   └── verify_sta_parser.py
+└── synth/
+    ├── ibex_core.v
+    ├── ibex_synth.v
+    └── synth.tcl
+
 ## Results Summary
 
 | Metric | TT (tt_025C_1v80) | SS (ss_100C_1v60) |
