@@ -1,5 +1,5 @@
-# STA Parser Creation, Starting from ibex rtl file, by: ** Azraf Inam Nafee  
-**Design:** ibex_core (32-bit RISC-V CPU)  
+# STA Parser Creation, Starting from ibex rtl file, by: ** Azraf Inam Nafee  **
+**Design:** ibex_core (32-bit RISC-V CPU)  (https://github.com/lowRISC/ibex#)
 **PDK:** sky130A  
 **Tool:** OpenSTA 2.4 (in Docker) + OpenLane  
 **Clock Period:** 20 ns  
