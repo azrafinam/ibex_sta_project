@@ -177,7 +177,7 @@ Key Outputs:
 | Critical module | gen_prefetch_buffer.prefetch_buffer_i | gen_prefetch_buffer.prefetch_buffer_i |
 | WNS delta (SS − TT) | −29.01 ns | |
 
-## Quick verification (curriculum checks)
+## Quick verification
 
 ```bash
 cd ~/ibex_sta_project
