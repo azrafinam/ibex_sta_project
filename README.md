@@ -51,23 +51,57 @@ ibex_sta_project/
 | Timing Met | NO | NO |
 | Critical Module | gen_prefetch_buffer.prefetch_buffer_i | gen_prefetch_buffer.prefetch_buffer_i |
 
-## Parser Validation
+## STA Findings & Analysis
 
-✓ WNS extraction: PASS  
-✓ TNS extraction: PASS  
-✓ Violation counting: PASS  
-✓ Path parsing (60 paths per corner): PASS  
-✓ Module ranking: PASS  
-✓ Verifier: 2/2 reports ALL PASS  
+### Timing Violations Overview
+
+The ibex_core design exhibits significant timing violations across all process corners analyzed:
+
+#### Slow-Slow (SS) Corner (ss_100C_1v60)
+- **Worst Negative Slack (WNS):** -38.35 ns
+- **Total Negative Slack (TNS):** -31,456.90 ns
+- **Total Violations:** 7,522 paths
+- **Severity:** Critical — design fails to meet 20 ns clock period by significant margin
+
+#### Typical-Typical (TT) Corner (tt_025C_1v80)
+- **Worst Negative Slack (WNS):** -9.04 ns
+- **Total Negative Slack (TNS):** -3,743.60 ns
+- **Total Violations:** 4,366 paths
+- **Severity:** High — approximately 45% fewer violations than SS corner but still substantial
+
+### Critical Path Analysis
+
+Both process corners identify the **gen_prefetch_buffer.prefetch_buffer_i** module as the critical region:
+- This submodule contributes the largest share of timing violations
+- Paths through the prefetch buffer logic are on the critical path
+- Potential root causes: deep combinational logic, high fan-out signals, or suboptimal placement/routing in synthesis
+
+### Key Observations
+
+1. **PVT Variation Impact:** The 29.31 ns difference in WNS between corners demonstrates significant process-voltage-temperature (PVT) sensitivity
+2. **Systematic Violations:** 4,366+ violations at TT (mild corner) suggest fundamental design/implementation issues rather than marginal timing failures
+3. **Clock Period Feasibility:** The 20 ns clock period may be too aggressive for the current sky130A technology node given the design complexity of ibex_core
+
+### Parser Validation
+
+The STA report parser successfully validates all findings:
+- ✓ WNS extraction: PASS (verified against raw STA output)
+- ✓ TNS extraction: PASS
+- ✓ Violation counting: PASS
+- ✓ Path parsing (60 paths per corner): PASS
+- ✓ Module ranking: PASS
+- ✓ Verifier: 2/2 reports ALL PASS
 
 ## Deliverables
 
-- sta_report_parser.py — 4 functions (extract_summary, parse_paths, count_by_module, print_summary)
-- verify_sta_parser.py — 10 automated checks
-- ibex_tt.txt, ibex_ss.txt — Real STA reports (30+ paths each)
-- parser_schema.md — Return type specifications
+- **sta_report_parser.py** — 4 functions (extract_summary, parse_paths, count_by_module, print_summary)
+- **verify_sta_parser.py** — 10 automated checks
+- **ibex_tt.txt, ibex_ss.txt** — Real STA reports (30+ paths each)
+- **ibex_sta_tables.md** — Detailed path analysis and timing metrics
+- **parser_schema.md** — Return type specifications and function documentation
+- **constraints.sdc** — Timing constraints used for analysis
 - This document
 
 ## Conclusion
 
-The STA parser successfully extracts timing metrics from real synthesis reports of ibex_core on sky130A PDK. The design violates timing constraints at both corners, with the SS corner being the critical bottleneck (38 ns slack violation). The `gen_prefetch_buffer` module is the primary source of violations and should be optimized for faster closure.
+The STA parser successfully extracts and validates timing metrics from real synthesis reports of ibex_core on sky130A PDK. The design exhibits critical timing violations at both process corners, with the Slow-Slow corner being the most constrained. The prefetch_buffer submodule is identified as the primary bottleneck. Remediation strategies may include pipeline restructuring, critical path optimization, increased frequency margin (clock period relaxation), or cell-level optimizations in high-violation modules.
