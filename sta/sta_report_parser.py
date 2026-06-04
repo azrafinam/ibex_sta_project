@@ -33,7 +33,6 @@ def extract_summary(report_path):
                             and result['hold_wns'] >= 0)
     return result
 
-
 # ===================== PATH PARSER =====================
 def parse_paths(report_path):
     paths   = []
