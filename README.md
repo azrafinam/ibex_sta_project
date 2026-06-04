@@ -66,7 +66,7 @@ The complete end-to-end flow transforms SystemVerilog RTL into synthesized gate-
 2. **Yosys Synthesis** — Verilog RTL is elaborated and synthesized to SKY130 HD standard cells, producing gate-level netlist (`synth/ibex_synth.v`)
 3. **Timing Constraints** — SDC file (`sta/constraints.sdc`) defines 20 ns clock, uncertainty, input/output delays, and driving cell characteristics
 4. **OpenSTA Analysis** — Gate netlist analyzed at both TT (25°C, 1.80V) and SS (100°C, 1.60V) process corners
-5. **Report Parsing** — Python parser (`sta/sta_report_parser.py`) extracts WNS, TNS, violations, and critical paths for structured analysis
+5. **Report Parsing** — Python parser (`sta/sta_report_parser.py`) implements `extract_summary`, `parse_paths`, `count_by_module`, and `print_summary` to extract summary metrics, per-path timing data, and violation counts.
 
 **Key milestones encountered and resolved:** 10 issues spanning sv2v package ordering, DPI-C exports, synthesis flags, clock constraints, and library paths. See [logs/RTL_TO_STA_FLOW.md](logs/RTL_TO_STA_FLOW.md)
 
@@ -96,7 +96,7 @@ The complete end-to-end flow transforms SystemVerilog RTL into synthesized gate-
          ▼
   ┌────────────────────────┐
   │  Gate-Level Netlist    │  synth/ibex_synth.v
-  │ (SKY130 HD std cells)  │  (~245K gates)
+  │ (SKY130 HD std cells)  │
   └──────┬─────────────────┘
          │
          ├─────────────────────────────────────────┐
@@ -121,22 +121,23 @@ The complete end-to-end flow transforms SystemVerilog RTL into synthesized gate-
          ┌──────────────────────┐
          │   STA Reports (txt)  │
          ├──────────────────────┤
-         │ • Timing violations  │
-         │ • Critical paths     │
-         │ • Slack/WNS/TNS      │
-         │ • Module breakdown   │
+         │ • Timing summary      │
+         │ • Startpoint/endpoint │
+         │ • Slack + VIOLATED    │
+         │ • Path/module details │
          └─────────┬────────────┘
                    │
                    │ sta_report_parser.py
-                   │ [Python 3.13]
+                   │ 
                    ▼
          ┌──────────────────────┐
-         │  Parsed Data (JSON)  │
+         │  Parsed Timing Data  │
+         │  (Python dict/list)  │
          ├──────────────────────┤
          │ • Summary metrics    │
-         │ • Path annotations   │
+         │ • Path lists        │
          │ • Module counts      │
-         │ • Violations list    │
+         │ • Violation flags    │
          └─────────┬────────────┘
                    │
                    │ verify_sta_parser.py
