@@ -25,6 +25,7 @@ ibex_sta_project/
 │   ├── ibex_ss.txt                    # Slow-Slow STA report (ss_100C_1v60 corner: WNS = -38.35 ns, TNS = -31456.90 ns, 7522 violations)
 │   ├── ibex_tt.txt                    # Typical-Typical STA report (tt_025C_1v80 corner: WNS = -9.04 ns, TNS = -3743.60 ns, 4366 violations)
 │   ├── ibex_sta_tables.md             # Annotated timing path analysis with format documentation and parser validation tables
+│   ├── sta_findings.md                # Comprehensive STA findings, critical path analysis, and remediation recommendations
 │   ├── parser_schema.md               # Function specifications: extract_summary(), parse_paths(), count_by_module(), print_summary()
 │   ├── run_sta.tcl                    # Generic OpenSTA script template
 │   ├── run_sta_ss.tcl                 # OpenSTA script for Slow-Slow corner analysis
@@ -92,16 +93,26 @@ The STA report parser successfully validates all findings:
 - ✓ Module ranking: PASS
 - ✓ Verifier: 2/2 reports ALL PASS
 
+## Documentation
+
+Comprehensive documentation is provided through the following markdown files:
+
+- **[sta_findings.md](sta/sta_findings.md)** — Detailed STA findings, critical path analysis, bottleneck identification, and remediation strategies
+- **[ibex_sta_tables.md](sta/ibex_sta_tables.md)** — Annotated timing path tables with raw STA metrics, path endpoint analysis, and parser validation reference data
+- **[parser_schema.md](sta/parser_schema.md)** — API documentation for STA report parser functions with return types and usage examples
+- **README.md** — This file; project overview and results summary
+
 ## Deliverables
 
 - **sta_report_parser.py** — 4 functions (extract_summary, parse_paths, count_by_module, print_summary)
 - **verify_sta_parser.py** — 10 automated checks
 - **ibex_tt.txt, ibex_ss.txt** — Real STA reports (30+ paths each)
 - **ibex_sta_tables.md** — Detailed path analysis and timing metrics
+- **sta_findings.md** — Comprehensive STA analysis and recommendations
 - **parser_schema.md** — Return type specifications and function documentation
 - **constraints.sdc** — Timing constraints used for analysis
-- This document
+- Complete RTL and synthesis deliverables
 
 ## Conclusion
 
-The STA parser successfully extracts and validates timing metrics from real synthesis reports of ibex_core on sky130A PDK. The design exhibits critical timing violations at both process corners, with the Slow-Slow corner being the most constrained. The prefetch_buffer submodule is identified as the primary bottleneck. Remediation strategies may include pipeline restructuring, critical path optimization, increased frequency margin (clock period relaxation), or cell-level optimizations in high-violation modules.
+The STA parser successfully extracts and validates timing metrics from real synthesis reports of ibex_core on sky130A PDK. The design exhibits critical timing violations at both process corners, with the Slow-Slow corner being the most constrained. The prefetch_buffer submodule is identified as the primary bottleneck. Remediation strategies may include pipeline restructuring, critical path optimization, increased frequency margin (clock period relaxation), or cell-level optimizations in high-violation modules. Refer to [sta_findings.md](sta/sta_findings.md) for detailed analysis and recommendations.
