@@ -38,7 +38,7 @@ ibex_sta_project/
 ├── reports/                          # Markdown analysis and curriculum proof
 │   ├── sta_findings.md               # Day 5 — 10-point submission table (ibex; GPU N/A)
 │   ├── ibex_sta_tables.md            # Day 0/1/3 — ground truth, path annotation, validation
-│   └── VERIFICATION.md               # Day 0–5 check commands + captured outputs
+│   └── verification.md               # Day 0–5 check commands + captured outputs
 │
 ├── logs/                             # Flow documentation and issue log
 │   └── RTL_TO_STA_FLOW.md            # sv2v → Yosys → OpenSTA pipeline + fixes table
@@ -91,7 +91,7 @@ cd ~/ibex_sta_project
 bash reproduce/run_curriculum_checks.sh
 ```
 
-Full command transcript and outputs: [reports/VERIFICATION.md](reports/VERIFICATION.md)
+Full command transcript and outputs: [reports/verification.md](reports/verification.md)
 
 ```bash
 cd sta
@@ -117,7 +117,7 @@ Details: [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md)
 |:---|:---|
 | [reports/sta_findings.md](reports/sta_findings.md) | Submission table (10 points) |
 | [reports/ibex_sta_tables.md](reports/ibex_sta_tables.md) | Ground truth + format study + parser validation |
-| [reports/VERIFICATION.md](reports/VERIFICATION.md) | Instruction checklist with proof outputs |
+| [reports/verification.md](reports/verification.md) | Instruction checklist with proof outputs |
 | [logs/RTL_TO_STA_FLOW.md](logs/RTL_TO_STA_FLOW.md) | RTL-to-STA methodology, pipeline phases, and resolved issues |
 | [sta/parser_schema.md](sta/parser_schema.md) | Parser API contract |
 | [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md) | Exact reproduction commands |
@@ -131,7 +131,7 @@ Details: [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md)
 | `sta/sta_report_parser.py` | 4 functions; matches grep ground truth |
 | `sta/verify_sta_parser.py` | **2/2 ALL PASS** on ibex reports |
 | `reports/sta_findings.md` | All 10 points (GPU columns N/A) |
-| `reports/VERIFICATION.md` | Check commands + outputs |
+| `reports/verification.md` | Check commands + outputs |
 
 
 ## Conclusion
