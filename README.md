@@ -66,7 +66,7 @@ The complete end-to-end flow transforms SystemVerilog RTL into synthesized gate-
 2. **Yosys Synthesis** — Verilog RTL is elaborated and synthesized to SKY130 HD standard cells, producing gate-level netlist (`synth/ibex_synth.v`)
 3. **Timing Constraints** — SDC file (`sta/constraints.sdc`) defines 20 ns clock, uncertainty, input/output delays, and driving cell characteristics
 4. **OpenSTA Analysis** — Gate netlist analyzed at both TT (25°C, 1.80V) and SS (100°C, 1.60V) process corners
-5. **Report Parsing** — Python parser (`sta/sta_report_parser.py`) implements `extract_summary`, `parse_paths`, `count_by_module`, and `print_summary` to extract summary metrics, per-path timing[...]
+5. **Report Parsing** — Python parser (`sta/sta_report_parser.py`) implements `extract_summary`, `parse_paths`, `count_by_module`, and `print_summary` to extract summary metrics, per-path timing.
 
 **Key milestones encountered and resolved:** 10 issues spanning sv2v package ordering, DPI-C exports, synthesis flags, clock constraints, and library paths. See [logs/RTL_TO_STA_FLOW.md](logs/RTL_TO_STA_FLOW.md) for details.
 
