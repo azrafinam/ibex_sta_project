@@ -333,7 +333,7 @@ FINAL: 2/2 passed
 Exit code: 0
 ```
 
-### Verifier checks implemented (8 of curriculum 10)
+### Verifier checks implemented (8 of 10)
 
 
 | #   | Check                            | ibex_tt | ibex_ss |
@@ -348,7 +348,7 @@ Exit code: 0
 | 8   | module counts match raw report   | PASS    | PASS    |
 
 
-*Curriculum also lists timing_met False when WNS<0 and setup_tns≤0 — check sta_findings.md for details.*
+*For details and timing_met False, setup_tns — check sta_findings.md*
 
 ---
 
@@ -372,7 +372,7 @@ FINAL: 2/2 passed
 OK: sta_findings.md present
 ```
 
-**Submission equivalence:** Curriculum target `4/4 reports ALL PASS` → this project `**2/2 reports ALL PASS`** (ibex only).
+**Team Submission target:**  `4/4 reports ALL PASS` → this project `**2/2 reports ALL PASS`** (ibex only).
 
 Findings table: [sta_findings.md](sta_findings.md)
 
