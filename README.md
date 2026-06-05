@@ -229,4 +229,4 @@ Details: [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md)
 
 ## Conclusion
 
-The STA parser extracts and validates ibex_core timing from real sky130A synthesis reports. Both corners fail timing; the prefetch buffer dominates violations. SS WNS is 29.01 ns worse than TT. S[...]
+The STA parser extracts and validates ibex_core timing from real sky130A synthesis reports. Both corners fail timing; the prefetch buffer dominates violations. SS WNS is 29.01 ns worse than TT. 
