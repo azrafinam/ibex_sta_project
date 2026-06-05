@@ -38,7 +38,7 @@ ibex_sta_project/
 ├── reports/                          # Markdown analysis and curriculum proof
 │   ├── sta_findings.md               # Day 5 — 10-point submission table (ibex; GPU N/A)
 │   ├── ibex_sta_tables.md            # Day 0/1/3 — ground truth, path annotation, validation
-│   └── VERIFICATION.md               # Day 0–5 check commands + captured outputs
+│   └── verification.md               # Day 0–5 check commands + captured outputs
 │
 ├── logs/                             # Flow documentation and issue log
 │   └── RTL_TO_STA_FLOW.md            # sv2v → Yosys → OpenSTA pipeline + fixes table
@@ -66,16 +66,16 @@ The complete end-to-end flow transforms SystemVerilog RTL into synthesized gate-
 2. **Yosys Synthesis** — Verilog RTL is elaborated and synthesized to SKY130 HD standard cells, producing gate-level netlist (`synth/ibex_synth.v`)
 3. **Timing Constraints** — SDC file (`sta/constraints.sdc`) defines 20 ns clock, uncertainty, input/output delays, and driving cell characteristics
 4. **OpenSTA Analysis** — Gate netlist analyzed at both TT (25°C, 1.80V) and SS (100°C, 1.60V) process corners
-5. **Report Parsing** — Python parser (`sta/sta_report_parser.py`) implements `extract_summary`, `parse_paths`, `count_by_module`, and `print_summary` to extract summary metrics, per-path timing data, and violation counts.
+5. **Report Parsing** — Python parser (`sta/sta_report_parser.py`) implements `extract_summary`, `parse_paths`, `count_by_module`, and `print_summary` to extract summary metrics, per-path timing[...]
 
-**Key milestones encountered and resolved:** 10 issues spanning sv2v package ordering, DPI-C exports, synthesis flags, clock constraints, and library paths. See [logs/RTL_TO_STA_FLOW.md](logs/RTL_TO_STA_FLOW.md)
+**Key milestones encountered and resolved:** 10 issues spanning sv2v package ordering, DPI-C exports, synthesis flags, clock constraints, and library paths. See [logs/RTL_TO_STA_FLOW.md](logs/RTL_[...]
 
 ### End-to-End Pipeline Flowchart
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────────────│
 │                          IBEX RTL-TO-STA FLOW                            │
-└──────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────│
 
   ┌──────────────┐
   │  ibex RTL    │  rtl/*.sv + include/*.svh
@@ -154,7 +154,7 @@ The complete end-to-end flow transforms SystemVerilog RTL into synthesized gate-
          ├──────────────────────┤
          │ • sta_findings.md    │
          │ • ibex_sta_tables.md │
-         │ • VERIFICATION.md    │
+         │ • verification.md    │
          └──────────────────────┘
 
 Key Outputs:
@@ -184,7 +184,7 @@ cd ~/ibex_sta_project
 bash reproduce/run_curriculum_checks.sh
 ```
 
-Full command transcript and outputs: [reports/VERIFICATION.md](reports/VERIFICATION.md)
+Full command transcript and outputs: [reports/verification.md](reports/verification.md)
 
 ```bash
 cd sta
@@ -210,7 +210,7 @@ Details: [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md)
 |:---|:---|
 | [reports/sta_findings.md](reports/sta_findings.md) | Submission table (10 points) |
 | [reports/ibex_sta_tables.md](reports/ibex_sta_tables.md) | Ground truth + format study + parser validation |
-| [reports/VERIFICATION.md](reports/VERIFICATION.md) | Instruction checklist with proof outputs |
+| [reports/verification.md](reports/verification.md) | Instruction checklist with proof outputs |
 | [logs/RTL_TO_STA_FLOW.md](logs/RTL_TO_STA_FLOW.md) | RTL-to-STA methodology, pipeline phases, and resolved issues |
 | [sta/parser_schema.md](sta/parser_schema.md) | Parser API contract |
 | [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md) | Exact reproduction commands |
@@ -224,9 +224,9 @@ Details: [reproduce/REPRODUCE.md](reproduce/REPRODUCE.md)
 | `sta/sta_report_parser.py` | 4 functions; matches grep ground truth |
 | `sta/verify_sta_parser.py` | **2/2 ALL PASS** on ibex reports |
 | `reports/sta_findings.md` | All 10 points (GPU columns N/A) |
-| `reports/VERIFICATION.md` | Check commands + outputs |
+| `reports/verification.md` | Check commands + outputs |
 
 
 ## Conclusion
 
-The STA parser extracts and validates ibex_core timing from real sky130A synthesis reports. Both corners fail timing; the prefetch buffer dominates violations. SS WNS is 29.01 ns worse than TT. Standard cell delays, clock skew, and physical uncertainty account for the large negative slack. Detailed findings and validation proofs are in the [reports/](reports/) directory.
+The STA parser extracts and validates ibex_core timing from real sky130A synthesis reports. Both corners fail timing; the prefetch buffer dominates violations. SS WNS is 29.01 ns worse than TT. S[...]
